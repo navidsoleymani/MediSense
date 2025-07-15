@@ -1,0 +1,13 @@
+# Environment type
+DJANGO_ENV=dev
+
+# SECURITY
+SECRET_KEY=my-secret-key
+
+# CACHE (Redis)
+REDIS_LOCATION=redis://redis:6379/1
+REDIS_TIMEOUT=300
+
+# DATABASE(MongoDB)
+MONGO_URI=mongodb://root:rootpassword@db:27017/medisense_db
+MONGO_DB_NAME=medisense_db
