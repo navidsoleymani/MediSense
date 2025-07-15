@@ -1,0 +1,78 @@
+# 🐳 Docker Compose Configuration for MediSense Platform
+# This setup provisions the following services:
+# - MongoDB (Database)
+# - Mongo Express (DB GUI)
+# - Django + Gunicorn (Backend Web API)
+
+version: "3.9"
+
+services:
+  # --------------------------------------------------
+  # MongoDB — Primary NoSQL Database for Medical Data
+  # --------------------------------------------------
+  mongo:
+    image: mongo:latest
+    container_name: mongo
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root       # Mongo root username
+      MONGO_INITDB_ROOT_PASSWORD: rootpassword  # Mongo root password
+    volumes:
+      - mongo_data:/data/db                  # Persistent data volume
+    networks:
+      - backend
+    ports:
+      - "27017:27017"                        # Expose default Mongo port
+
+  # --------------------------------------------
+  # Mongo Express — Web Interface for MongoDB
+  # --------------------------------------------
+  mongo-express:
+    image: mongo-express:latest
+    container_name: mongo_express
+    restart: always
+    ports:
+      - "8081:8081"                          # Accessible at http://localhost:8081
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: root
+      ME_CONFIG_MONGODB_ADMINPASSWORD: rootpassword
+      ME_CONFIG_BASICAUTH_USERNAME: admin    # GUI login username
+      ME_CONFIG_BASICAUTH_PASSWORD: admin123 # GUI login password
+      ME_CONFIG_MONGODB_SERVER: mongo        # Internal service reference
+    depends_on:
+      - mongo
+    networks:
+      - backend
+
+  # ---------------------------------------
+  # Django Web API (Gunicorn Production)
+  # ---------------------------------------
+  django_app:
+    build: .                                 # Build from local Dockerfile
+    container_name: django_app
+    command: gunicorn config.wsgi:application --bind 0.0.0.0:8000 --timeout 120 --worker-class gevent
+    volumes:
+      - .:/app                               # Mount local code into container
+    ports:
+      - "8000:8000"                          # Expose backend API on host
+    depends_on:
+      - mongo
+    networks:
+      - backend
+    environment:
+      MONGO_URI: mongodb://root:rootpassword@mongo:27017/medisense_db?authSource=admin
+      MONGO_DB_NAME: medisense_db
+      DEBUG: "False"                         # Ensure production behavior
+      DJANGO_SECRET_KEY: your_secret_key     # Replace with secure key in .env
+
+# ----------------------------------
+# Persistent Storage for Mongo Data
+# ----------------------------------
+volumes:
+  mongo_data:
+
+# ------------------------------
+# Shared Network Between Services
+# ------------------------------
+networks:
+  backend:
+    driver: bridge
